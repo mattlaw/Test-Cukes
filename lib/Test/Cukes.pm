@@ -30,13 +30,22 @@ sub runtests {
         $feature->{$caller} = Test::Cukes::Feature->new($feature_text);
     }
 
-    my @scenarios_of_caller = @{$feature->{$caller}->scenarios};
+    my $feature = $feature->{$caller}
+        or die "No features defined in '$caller'\n";
+
+    # In verbose mode show the feature definition
+    Test::Cukes->builder->note(
+        "Feature: ", $feature->name, $feature->body
+    );
+
+    my @scenarios_of_caller = @{$feature->scenarios};
 
     for my $scenario (@scenarios_of_caller) {
         my $skip = 0;
         my $skip_reason = "";
         my $gwt;
 
+        Test::Cukes->builder->note("Scenario: ", $scenario->name);
 
         for my $step_text (@{$scenario->steps}) {
             my ($pre, $step) = split " ", $step_text, 2;
@@ -51,8 +60,14 @@ sub runtests {
             for my $step_pattern (keys %$steps) {
                 my $cb = $steps->{$step_pattern}->{code};
 
+
                 if (my (@matches) = $step =~ m/$step_pattern/) {
                     my $ok = 1;
+
+                    Test::Cukes->builder->note(
+                        sprintf("%s:%d", @{$steps->{$step_pattern}{definition}}{qw( filename line )})
+                    );
+
                     try {
                         $cb->(@matches);
                     } catch {
@@ -73,7 +88,7 @@ sub runtests {
             }
 
             unless($found_step) {
-                $step_text =~ s/^And /$gwt /;
+                $step_text =~ s/^(?:And|But)(?=\s)/$gwt/;
                 push @missing_steps, $step_text;
             }
         }

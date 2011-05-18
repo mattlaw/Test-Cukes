@@ -23,10 +23,15 @@ sub BUILDARGS {
         };
 
         for my $line (split /\n+/, $scenario_text) {
-            if ($line =~ /^Scenario:\s(.+)$/) {
+            if ($line =~ /^Scenario:\s+(.+)$/) {
                 $args->{name} = $1;
-            } elsif ($line =~ /^  (Given|When|Then|And)\s(.+)$/) {
+            }
+            elsif ($line =~ /^[ ]{2,}(Given|When|Then|And|But)\s+(.+)$/) {
                 push @{$args->{ steps }}, "$1 $2";
+            }
+            elsif (/\S/) {
+                die "Unrecognised scenario syntax:\n",
+                    "----\n$line\n----\n\n";
             }
         }
 
