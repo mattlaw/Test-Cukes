@@ -1,7 +1,7 @@
 #!/usr/bin/env perl -w
 use strict;
 use Test::More;
-use Test::Cukes tests => 2;
+use Test::Cukes tests => 5;
 
 feature(<<FEATURE_TEXT);
 Feature: foo
@@ -10,7 +10,7 @@ Feature: foo
 
   Scenario: blehbleh
     Given I am a missing person
-    When blah2
+    When I am a missing animal
     Then blah3
 FEATURE_TEXT
 
@@ -20,7 +20,8 @@ When qr/I am a missing (animal|alien)/i => sub {
   $hit_given = 1;
 };
 
+# 3 tests (skipped)
 runtests;
 
 is($hit_given, 0, "Correctly never ran the 'when' test"); 
-ok(@Test::Cukes::missing_steps == 3);
+is(@Test::Cukes::missing_steps, 2, '2 steps were missing');

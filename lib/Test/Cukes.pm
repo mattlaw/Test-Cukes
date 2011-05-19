@@ -42,7 +42,6 @@ sub runtests {
 
     for my $scenario (@scenarios_of_caller) {
         my $skip = 0;
-        my $skip_reason = "";
         my $gwt;
 
         Test::Cukes->builder->note("Scenario: ", $scenario->name);
@@ -52,7 +51,6 @@ sub runtests {
             my ($pre, $step) = split " ", $step_text, 2;
             $gwt = $pre if $pre =~ /(Given|When|Then)/;
 
-            my $found_step = 0;
             for my $step_pattern (keys %$steps) {
                 my $cb = $steps->{$step_pattern}->{code};
 
@@ -60,9 +58,9 @@ sub runtests {
                 if (my (@matches) = $step =~ m/$step_pattern/) {
                     my $ok = 1;
 
+                    my $def = $steps->{$step_pattern}{definition};
                     Test::Cukes->builder->note(
-                        my $def = $steps->{$step_pattern}{definition};
-                        join ':', @$def{qw( filename line )};
+                        join ':', @$def{qw( filename line )}
                     );
 
                     if ($skip) {
@@ -70,29 +68,30 @@ sub runtests {
                         next STEP;
                     }
 
+                    my $error;
                     try {
                         $cb->(@matches);
                     } catch {
                         $ok = 0;
+                        $skip = 1;
+                        $error = $_;
                     };
 
                     Test::Cukes->builder->ok($ok, $step_text);
+                    Test::Cukes->builder->diag($error) if $error;
 
-                    if ($skip == 0 && !$ok) {
-                        Test::Cukes->builder->diag($@);
-                        $skip = 1;
-                        $skip_reason = "Failed: $step_text";
-                    }
-
-                    $found_step = 1;
-                    last;
+                    next STEP;
                 }
             }
 
-            unless($found_step) {
-                $step_text =~ s/^(?:And|But)(?=\s)/$gwt/;
-                push @missing_steps, $step_text;
-            }
+            # If we get here we didn't find a definition
+
+            Test::Cukes->builder->todo_skip($step_text);
+            $step_text =~ s/^(?:And|But)(?=\s)/$gwt/;
+            push @missing_steps, $step_text;
+
+            # Don't run any more tests, even if defined
+            $skip = 1;
         }
     }
 
