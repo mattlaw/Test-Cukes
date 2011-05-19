@@ -47,13 +47,9 @@ sub runtests {
 
         Test::Cukes->builder->note("Scenario: ", $scenario->name);
 
+        STEP:
         for my $step_text (@{$scenario->steps}) {
             my ($pre, $step) = split " ", $step_text, 2;
-            if ($skip) {
-                Test::Cukes->builder->skip($step_text);
-                next;
-            }
-
             $gwt = $pre if $pre =~ /(Given|When|Then)/;
 
             my $found_step = 0;
@@ -65,8 +61,14 @@ sub runtests {
                     my $ok = 1;
 
                     Test::Cukes->builder->note(
-                        sprintf("%s:%d", @{$steps->{$step_pattern}{definition}}{qw( filename line )})
+                        my $def = $steps->{$step_pattern}{definition};
+                        join ':', @$def{qw( filename line )};
                     );
+
+                    if ($skip) {
+                        Test::Cukes->builder->skip($step_text);
+                        next STEP;
+                    }
 
                     try {
                         $cb->(@matches);
